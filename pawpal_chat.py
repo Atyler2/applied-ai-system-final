@@ -85,7 +85,10 @@ def generate_rag_answer(
     retrieved_facts = retrieve_top_facts(query, owner, pet, top_k=top_k)
     try:
         openai, OpenAIError = get_openai_client()
+    except RuntimeError as exc:
+        return str(exc), retrieved_facts
 
+    try:
         context_text = "\n".join(retrieved_facts)
         system_message = (
             "You are PawPal+, a pet care assistant. Use only the supplied facts about the owner, pet, and tasks when answering questions. "
@@ -113,5 +116,8 @@ def generate_rag_answer(
             f"OpenAI API error: {exc}. Please verify your OPENAI_API_KEY and quota.",
             retrieved_facts,
         )
-    except RuntimeError as exc:
-        return str(exc), retrieved_facts
+    except Exception as exc:
+        return (
+            f"Unexpected error calling OpenAI: {exc}",
+            retrieved_facts,
+        )
