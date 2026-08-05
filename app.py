@@ -3,6 +3,17 @@ import streamlit as st
 from pawpal_system import Owner, Pet, Scheduler, Task
 from pawpal_chat import generate_rag_answer
 
+
+def is_openai_installed() -> bool:
+    try:
+        import openai  # type: ignore
+        return True
+    except ImportError:
+        return False
+
+
+openai_installed = is_openai_installed()
+
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
 
@@ -226,6 +237,12 @@ with cols[0]:
         st.session_state.show_chat = not st.session_state.show_chat
 with cols[1]:
     st.markdown("**PawPal Assistant**")
+
+if not openai_installed:
+    st.error(
+        "The openai package is not installed in the current environment. "
+        "Please ensure the deployed app installs requirements.txt correctly."
+    )
 
 if st.session_state.show_chat:
     st.write(
