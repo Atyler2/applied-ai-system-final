@@ -1,6 +1,7 @@
 from typing import Optional
 import streamlit as st
 from pawpal_system import Owner, Pet, Scheduler, Task
+from pawpal_chat import generate_rag_answer
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -30,6 +31,12 @@ if "active_pet_index" not in st.session_state:
     st.session_state.active_pet_index = 0
 if "changelog_ui" not in st.session_state:
     st.session_state.changelog_ui = []
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "rag_query" not in st.session_state:
+    st.session_state.rag_query = ""
+if "show_chat" not in st.session_state:
+    st.session_state.show_chat = False
 
 
 def active_pet() -> Pet:
@@ -211,6 +218,51 @@ if st.button("Generate schedule"):
     else:
         st.info("No tasks fit within the available time.")
 
+
+st.markdown("---")
+cols = st.columns([0.18, 0.82])
+with cols[0]:
+    if st.button("Toggle chat", key="toggle_chat_button"):
+        st.session_state.show_chat = not st.session_state.show_chat
+with cols[1]:
+    st.markdown("**PawPal Assistant**")
+
+if st.session_state.show_chat:
+    st.write(
+        "Ask about the current owner, pet, or task schedule. PawPal uses retrieval-augmented generation over your active pet data."
+    )
+    with st.form("pawpal_chat_form"):
+        rag_query = st.text_input(
+            "Ask PawPal a question",
+            value=st.session_state.rag_query,
+            key="rag_query_input",
+        )
+        ask = st.form_submit_button("Ask PawPal")
+        if ask:
+            st.session_state.rag_query = rag_query
+            if not rag_query.strip():
+                st.warning("Please enter a question for PawPal.")
+            else:
+                answer, retrieved_facts = generate_rag_answer(
+                    rag_query.strip(), owner, pet, top_k=3
+                )
+                st.session_state.chat_history.append(
+                    {
+                        "question": rag_query.strip(),
+                        "answer": answer,
+                        "facts": retrieved_facts,
+                    }
+                )
+                st.experimental_rerun()
+
+    if st.session_state.chat_history:
+        for entry in reversed(st.session_state.chat_history):
+            with st.expander(f"Question: {entry['question']}", expanded=False):
+                st.write(entry['answer'])
+                if entry['facts']:
+                    st.markdown("**Retrieved facts:**")
+                    for fact in entry['facts']:
+                        st.write(f"- {fact}")
 
 st.markdown("---")
 st.subheader("Changelog (UI edits)")
