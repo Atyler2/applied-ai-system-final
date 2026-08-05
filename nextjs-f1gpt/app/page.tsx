@@ -1,104 +1,38 @@
 ﻿"use client"
 
-import { useState, type FormEvent } from "react"
-import Bubble from "./components1/bubble"
-import LoadingBubble from "./components1/loadingBubble"
-import PromptSuggestionRow from "./components1/promptSuggestionRow"
+import Link from "next/link"
 
-const Home = () => {
-  const [messages, setMessages] = useState<{ id: string; role: string; content: string }[]>([])
-  const [input, setInput] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-
-  const noMessage = messages.length === 0
-
-  const sendMessage = async (content: string) => {
-    if (!content?.trim()) return
-
-    const userMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: content.trim(),
-    }
-
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
-    setInput("")
-    setIsLoading(true)
-    setError("")
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updatedMessages }),
-      })
-
-      if (!response.ok) {
-        const body = await response.text()
-        throw new Error(body || "Chat request failed")
-      }
-
-      const data = await response.json()
-      const assistantMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: data.text || "Sorry, I could not generate a response.",
-      }
-      setMessages((prev) => [...prev, assistantMessage])
-    } catch {
-      setError("Unable to send message. Try again.")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    await sendMessage(input)
-  }
-
-  const handlePromptClick = async (prompt: string) => {
-    await sendMessage(prompt)
-  }
-
+export default function HomePage() {
   return (
-    <main>
-      <section className={noMessage ? "" : "populated"}>
-        {noMessage ? (
-          <>
-            <div className="starter-text">
-              <h1>Welcome to f1GPT</h1>
-              <p>Ask a pet care question or choose a prompt to get started.</p>
-            </div>
-            <PromptSuggestionRow onPromptClick={handlePromptClick} />
-          </>
-        ) : (
-          <>
-            {messages.map((message) => (
-              <Bubble key={message.id} message={message} />
-            ))}
-            {isLoading && <LoadingBubble />}
-          </>
-        )}
+    <main className="landing-shell">
+      <section className="hero-card">
+        <p className="eyebrow">PawPal+ • React app</p>
+        <h1>Plan pet care in a modern Next.js experience</h1>
+        <p>
+          Manage owners, pets, care tasks, and AI guidance from one polished interface without the old
+          Streamlit workflow.
+        </p>
+        <div className="hero-actions">
+          <Link className="btn primary" href="/pets">Manage pets</Link>
+          <Link className="btn ghost" href="/schedule">Build schedule</Link>
+          <Link className="btn ghost" href="/assistant">Open assistant</Link>
+        </div>
       </section>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          className="question-box"
-          onChange={(event) => setInput(event.target.value)}
-          value={input}
-          placeholder="Ask something about pet care"
-        />
-        <button className="send-button" type="submit" disabled={isLoading}>
-          {isLoading ? "Sending..." : "Send"}
-        </button>
-      </form>
-
-      {error ? <p className="error-text">{error}</p> : null}
+      <section className="feature-grid">
+        <article className="feature-card">
+          <h2>Task planning</h2>
+          <p>Create, edit, and organize care tasks with priorities and preferred times.</p>
+        </article>
+        <article className="feature-card">
+          <h2>Scheduling insights</h2>
+          <p>Generate an actionable plan and highlight potential time conflicts.</p>
+        </article>
+        <article className="feature-card">
+          <h2>AI assistant</h2>
+          <p>Ask PawPal questions using the active owner, pet, and task context.</p>
+        </article>
+      </section>
     </main>
   )
 }
-
-export default Home

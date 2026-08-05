@@ -6,6 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start:prod": "npm run build && npm run start",
+    "check:env": "node scripts/verify-env.js",
+    "start:safe": "npm run check:env && npm run start:prod",
     "seed": "ts-node scripts/loadDB.ts",
     "lint": "eslint"
   },

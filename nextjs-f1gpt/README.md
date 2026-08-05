@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PawPal+ Next.js App
 
-## Getting Started
+## Prerequisites
 
-First, run the development server:
+- Node.js 20+
+- npm 10+
+
+## Reproducible setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create your environment file:
+
+```bash
+copy .env.example .env
+```
+
+3. Add values for:
+
+- OPENAI_API_KEY
+- ASTRA_DB_API_ENDPOINT
+- ASTRA_DB_APPLICATION_TOKEN
+- ASTRA_DB_COLLECTION
+- ASTRA_DB_NAMESPACE (optional)
+
+## Start commands
+
+- Production-safe startup (recommended):
+
+```bash
+npm run start:safe
+```
+
+This command runs:
+
+- `npm run check:env` to validate required variables
+- `npm run build` to create a production build
+- `npm start` to run the production server
+
+- Development startup:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Use dev mode only when actively developing. It uses more CPU and RAM because of file watching and hot reload.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API guardrails and logging
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Input payload validation for API routes
+- Environment validation with clear error responses
+- Structured server logs with request IDs and durations
+- Safe fallback behavior when OpenAI quota/billing is unavailable
 
-## Learn More
+## Troubleshooting
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- If assistant shows fallback mode:
+  - Check OpenAI quota/billing.
+  - Restart the server after updating `.env`.
+- If startup fails:
+  - Run `npm run check:env` and fill any missing variables.
+- If performance is poor:
+  - Prefer `npm run start:safe` over `npm run dev`.
+  - Avoid running the project from OneDrive-synced folders when possible.

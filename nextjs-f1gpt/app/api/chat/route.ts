@@ -1,40 +1,54 @@
 ﻿import OpenAI from "openai"
 import { DataAPIClient, DataAPIVector } from "@datastax/astra-db-ts"
 
-const {
-  ASTRA_DB_NAMESPACE,
-  ASTRA_DB_COLLECTION,
-  ASTRA_DB_API_ENDPOINT,
-  ASTRA_DB_APPLICATION_TOKEN,
-  OPENAI_API_KEY,
-} = process.env
-
-if (!ASTRA_DB_API_ENDPOINT) {
-  throw new Error("ASTRA_DB_API_ENDPOINT is required")
+function errorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  return String(error)
 }
 
-if (!ASTRA_DB_APPLICATION_TOKEN) {
-  throw new Error("ASTRA_DB_APPLICATION_TOKEN is required")
-}
+function readEnv() {
+  const {
+    ASTRA_DB_NAMESPACE,
+    ASTRA_DB_COLLECTION,
+    ASTRA_DB_API_ENDPOINT,
+    ASTRA_DB_APPLICATION_TOKEN,
+    OPENAI_API_KEY,
+  } = process.env
 
-if (!ASTRA_DB_COLLECTION) {
-  throw new Error("ASTRA_DB_COLLECTION is required")
-}
+  const missing: string[] = []
+  if (!ASTRA_DB_COLLECTION) missing.push("ASTRA_DB_COLLECTION")
+  if (!ASTRA_DB_API_ENDPOINT) missing.push("ASTRA_DB_API_ENDPOINT")
+  if (!ASTRA_DB_APPLICATION_TOKEN) missing.push("ASTRA_DB_APPLICATION_TOKEN")
+  if (!OPENAI_API_KEY) missing.push("OPENAI_API_KEY")
 
-if (!OPENAI_API_KEY) {
-  throw new Error("OPENAI_API_KEY is required")
+  return {
+    ASTRA_DB_NAMESPACE,
+    ASTRA_DB_COLLECTION,
+    ASTRA_DB_API_ENDPOINT,
+    ASTRA_DB_APPLICATION_TOKEN,
+    OPENAI_API_KEY,
+    missing,
+  }
 }
-
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
-const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN)
-const db = client.db(ASTRA_DB_API_ENDPOINT, {
-  token: ASTRA_DB_APPLICATION_TOKEN,
-  ...(ASTRA_DB_NAMESPACE ? { keyspace: ASTRA_DB_NAMESPACE } : {}),
-})
 
 export async function POST(req: Request) {
-  const body = await req.json()
-  const messages = Array.isArray(body?.messages) ? body.messages : []
+  const requestId = crypto.randomUUID()
+  const startedAt = Date.now()
+
+  let body: any
+  try {
+    body = await req.json()
+  } catch (error) {
+    console.error("[chat-api] invalid-json", { requestId, error: errorMessage(error) })
+    return new Response(JSON.stringify({ error: "Invalid JSON payload" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+
+  const messages = Array.isArray(body?.messages)
+    ? (body.messages as Array<{ role: string; content: string }>)
+    : []
 
   if (messages.length === 0) {
     return new Response(JSON.stringify({ error: "No messages provided" }), {
@@ -43,8 +57,43 @@ export async function POST(req: Request) {
     })
   }
 
+  const env = readEnv()
+  if (env.missing.length > 0) {
+    console.error("[chat-api] missing-env", { requestId, missing: env.missing })
+    return new Response(
+      JSON.stringify({
+        error: "Server configuration is incomplete.",
+        missingVariables: env.missing,
+      }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }
+    )
+  }
+
+  const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY })
+  const client = new DataAPIClient(env.ASTRA_DB_APPLICATION_TOKEN as string)
+  const db = client.db(env.ASTRA_DB_API_ENDPOINT as string, {
+    token: env.ASTRA_DB_APPLICATION_TOKEN,
+    ...(env.ASTRA_DB_NAMESPACE ? { keyspace: env.ASTRA_DB_NAMESPACE } : {}),
+  })
+
   const latestMessage = messages[messages.length - 1]
-  const userText = typeof latestMessage === "string" ? latestMessage : latestMessage.content
+  const userText = typeof latestMessage === "string" ? latestMessage : latestMessage?.content
+
+  if (!userText || typeof userText !== "string") {
+    return new Response(JSON.stringify({ error: "Latest message content is required" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
+
+  console.info("[chat-api] request-start", {
+    requestId,
+    messageCount: messages.length,
+    latestMessageLength: userText.length,
+  })
 
   let docContext = ""
 
@@ -56,8 +105,8 @@ export async function POST(req: Request) {
 
     const embedding = embeddingResponse.data?.[0]?.embedding
 
-    if (embedding && ASTRA_DB_COLLECTION) {
-      const collection = await db.collection(ASTRA_DB_COLLECTION)
+    if (embedding && env.ASTRA_DB_COLLECTION) {
+      const collection = await db.collection(env.ASTRA_DB_COLLECTION)
       const cursor = await collection
         .find({})
         .sort({ $vector: new DataAPIVector(embedding) })
@@ -68,30 +117,48 @@ export async function POST(req: Request) {
       docContext = docsMap.filter(Boolean).join("\n\n---\n\n")
     }
   } catch (error) {
-    console.error("Astra DB or embedding error:", error)
+    console.warn("[chat-api] retrieval-fallback", {
+      requestId,
+      error: errorMessage(error),
+    })
     docContext = ""
   }
 
   const systemPrompt = `You are an AI assistant who knows everything about pet care. Use the context below when it is relevant, but do not claim the context is the source of your knowledge. If the context is not needed, answer based on your existing knowledge.\n\nCONTEXT:\n${docContext}`
 
   try {
+    const chatMessages = [
+      { role: "system" as const, content: systemPrompt },
+      ...messages.map((msg) => ({
+        role: msg.role as "system" | "user" | "assistant",
+        content: msg.content,
+      })),
+    ]
+
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
-      ],
+      messages: chatMessages,
       max_tokens: 500,
       temperature: 0.2,
     })
 
     const answer = completion.choices?.[0]?.message?.content || "Sorry, I couldn't generate an answer."
 
+    console.info("[chat-api] request-success", {
+      requestId,
+      durationMs: Date.now() - startedAt,
+      usedContext: Boolean(docContext),
+    })
+
     return new Response(JSON.stringify({ text: answer }), {
       headers: { "Content-Type": "application/json" },
     })
   } catch (error) {
-    console.error("OpenAI chat completion error:", error)
+    console.error("[chat-api] request-failed", {
+      requestId,
+      durationMs: Date.now() - startedAt,
+      error: errorMessage(error),
+    })
     return new Response(JSON.stringify({ error: "OpenAI chat completion failed. Please check your API quota and key." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

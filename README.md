@@ -1,166 +1,106 @@
-# PawPal+ (Module 2 Project)
+# PawPal+
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
+PawPal+ is a React and Next.js application for planning pet care tasks and asking an AI assistant about the active owner, pet, and schedule.
 
-## Scenario
+## Summary
 
-A busy pet owner needs help staying consistent with pet care. They want an assistant that can:
+- PawPal+ is a pet-care planning app with a Next.js frontend and AI assistant features. Users manage owners, pets, and tasks, then generate schedules and ask assistant questions based on active pet context. The system uses guarded API routes with logging, optional Astra retrieval, and OpenAI for responses, with safe fallback mode when AI services are unavailable. It also includes Python scheduling/domain logic and tests for core planning behavior.
 
-- Track pet care tasks (walks, feeding, meds, enrichment, grooming, etc.)
-- Consider constraints (time available, priority, owner preferences)
-- Produce a daily plan and explain why it chose that plan
+## System Diagram Explanation
 
-Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
+- The user asks a question in the Assistant UI, which sends the request to the /api/pawpal handler.
+  The evaluator/guardrail layer validates the request and decides whether to continue with normal AI processing or fallback mode.
+  The retriever builds context from owner/pet/task state (and optionally vector retrieval) and passes that context to the agent.
+  The agent calls OpenAI to generate the final response.
+  The response is returned to the user, with a fallback warning if AI services are unavailable.
+  Runtime logs capture request IDs, errors, and fallback reasons.
+  Testing and human review are shown as verification points to check answer quality and reliability.
 
-## What you will build
+## Setup and run (recommended)
 
-Your final app should:
+1. Install Node.js 20+ and npm.
 
-- Let a user enter basic owner + pet info
-- Let a user add/edit tasks (duration + priority at minimum)
-- Generate a daily schedule/plan based on constraints and priorities
-- Display the plan clearly (and ideally explain the reasoning)
-- Include tests for the most important scheduling behaviors
-
-## Getting started
-
-### Setup
+2. Configure environment variables.
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+cd nextjs-f1gpt
+copy .env.example .env
 ```
 
-### Suggested workflow
+Fill in real values in `.env` for OpenAI and Astra DB.
 
-1. Read the scenario carefully and identify requirements and edge cases.
-2. Draft a UML diagram (classes, attributes, methods, relationships).
-3. Convert UML into Python class stubs (no logic yet).
-4. Implement scheduling logic in small increments.
-5. Add tests to verify key behaviors.
-6. Connect your logic to the Streamlit UI in `app.py`.
-7. Refine UML so it matches what you actually built.
+3. Install dependencies.
 
-## 🖥️ Sample Output
-
-Paste a sample of your app's CLI or Streamlit output here so a reader can see what a generated plan looks like:
-
-```
-# e.g.:
-# Daily plan for Biscuit (Golden Retriever):
-#   08:00 — Morning walk (30 min) [priority: high]
-#   09:00 — Feeding (10 min) [priority: high]
-#   ...
+```bash
+npm install
 ```
 
-## 🧪 Testing PawPal+
+4. Validate environment and start production mode.
 
+```bash
+npm run start:safe
+```
+
+This runs an env check, builds the app, and starts the production server.
+
+5. Open http://localhost:3000.
+
+## Development mode
+
+```bash
+cd nextjs-f1gpt
+npm run dev
+```
+
+Use development mode only when actively coding. It consumes more CPU/RAM than production mode.
+
+## Logging and guardrails
+
+- API routes validate input payloads and required environment variables.
+- API routes log request start, success, fallback, and failure with request IDs and durations.
+- If OpenAI quota is exhausted, the PawPal assistant returns a safe local fallback response instead of crashing.
+
+## Run the Python tests
+
+```bash
 python -m pytest
--test_owner_and_pet_relationships
--checks if owner can stor preferences,add pet and link the pet.
--test_task_priority_and_feasibility
--verfies priority scoring and whether a task fits given time
--test_daily_plan_generation_selects_tasks_within_time
--makes sure plan selects high priority that is within the owners time frame
--test_explain_plan_returns_reasoning_strings
--plan explanation includes the sleected task by name
--test_filter_tasks_by_completion_status
--does filering tasks go into completed or incompleted correctly
-
-- test_filter_tasks_by_pet_name
-  -checks if filter task by specific name
-  -test_scheduler_detects_same_pet_time_conflicts - makes sure one warning is made for identical times
-  -test_scheduler_detects_different_pet_time_conflicts
-  -makes sure one warning is made for different times
-  -test_mark_complete_creates_next_daily_and_weekly_occurrences
-  -verifies recurring tasks
-
-```bash
-# Run the full test suite:
-pytest
-
-# Run with coverage:
-pytest --cov
 ```
 
-Sample test output:
+## Design Decisions
 
-````
-# Paste your pytest output here
-```plugins: anyio-4.13.0
-collected 11 items
+-Earlier in the design proccess, I had decided to use Streamlit to build the frontend UI for my petpal app. However, I ran into many issues when trying to install openAI and add it to requirements. However when I switched to React it was much easier to solve this issue, with the trade off being that streamlit is much faster to set up and deploy.
 
-tests\test_pawpal.py ..                                                                                      [ 18%]
-tests\test_pawpal_system.py .........                                                                        [100%]
+## Testing Summary
 
-=============================================== 11 passed in 0.14s ================================================
+What worked:
 
-## 📐 Smarter Scheduling
+We successfully hardened the app setup with a reproducible startup flow (check:env -> build -> start).
+Environment validation and production build checks ran successfully.
+API guardrails and logging improvements worked as intended, giving clearer error/fallback behavior.
+Diagram tasks were completed in Mermaid format, and the approval-first workflow worked once we switched to it.
 
-### Features
-- Sorting by time: tasks can be ordered by `preferred_time` in `HH:MM` format.
-- Filtering tasks: tasks can be filtered by completion status or by pet name.
-- Conflict warnings: the scheduler returns warnings when multiple tasks share the same scheduled time.
-- Daily recurrence: recurring tasks can auto-create the next occurrence for daily or weekly schedules.
-- Priority-based planning: the plan selects tasks that fit within the owner’s available time and priority constraints.
+What did not work:
 
-## Demo Walkthrough
+npm start initially failed when run without the correct production sequence.
+AI assistant full mode did not work because the OpenAI account hit quota/credit limits, so responses fell back to local mode.
+The first architecture diagram did not match your expected style and had to be redesigned.
+Early on, there was one process issue where changes were made before you explicitly approved the final diagram version.
 
-### Main UI features
-- Enter owner and pet details, including available daily time.
-- Add tasks with a title, duration, priority, and preferred time.
-- Generate a schedule and view the planned tasks in a clear table.
-- See conflict warnings when multiple tasks are assigned the same time.
-- Review sorted tasks, completed/incomplete tasks, and pet-specific task views.
+## Sample Interactions
 
-### Example workflow
-1. Add a pet and set the owner’s available time.
-2. Add one or more care tasks such as walks, feeding, or grooming.
-3. Generate the schedule to see which tasks fit the day.
-4. Review the time-sorted task list and any conflict warnings.
-5. Mark a task complete and see how recurring tasks are handled.
+Example 1
 
-### Key Scheduler behaviors shown
-- Sorting by time: tasks are displayed in chronological order using `preferred_time`.
-- Conflict warnings: overlapping same-time tasks raise a warning message.
-- Filtering: tasks can be filtered by completion status or by pet name.
-- Recurring tasks: completing a daily or weekly task creates the next occurrence automatically.
+- Input: "What should I do first this morning for Mochi?"
+- Output: "I can still help using the current PawPal context, but full AI mode is temporarily unavailable. Relevant context: Owner available time and pending tasks are listed. Recommended next steps: prioritize high-priority and time-sensitive tasks first."
 
-### Sample CLI output from `main.py`
-```text
-Tasks in the plan before sorting:
-- Play (Tala, 09:00, medium)
-- Wash (Tala, 09:00, medium)
-- Walk (Tala, 07:15, high)
-- Brush Luna (Luna, 10:00, low)
+Example 2
 
-Tasks sorted by priority:
-- Walk (07:15, high)
-- Play (09:00, medium)
-- Wash (09:00, medium)
-- Brush Luna (10:00, low)
+- Input: "Do I have any tasks around 09:00, and could there be a conflict?"
+- Output: "I can still help using the current PawPal context, but full AI mode is temporarily unavailable. Relevant context includes tasks with preferred times. Recommended next steps: keep completed tasks marked done so schedules stay accurate."
 
-Tasks sorted by preferred time:
-- Walk (07:15, high)
-- Play (09:00, medium)
-- Wash (09:00, medium)
-- Brush Luna (10:00, low)
+Example 3
 
-Conflict check:
-Warning: tasks scheduled at the same time: 'Play' (Tala), 'Wash' (Tala).
+- Input: "I only have 30 minutes today. What should I focus on?"
+- Output: "I can still help using the current PawPal context, but full AI mode is temporarily unavailable. Recommended next steps: focus on essentials like feeding, medication, and exercise when time is limited."
 
-Completed tasks:
-- Wash
-
-Incomplete tasks:
-- Walk
-- Play
-- Brush Luna
-
-Tasks filtered by pet name 'Tala':
-- Walk (Tala)
-- Play (Tala)
-- Wash (Tala)
-```
-````
+Note: When OpenAI quota/billing is active, these responses come from the full model flow instead of fallback mode.

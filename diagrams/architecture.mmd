@@ -1,0 +1,77 @@
+flowchart LR
+    %% PawPal+ Architecture: Components + Interactions
+
+    %% Actors
+    User((User))
+
+    %% Client Layer
+    subgraph Client["Client Layer (Browser)"]
+        UI["Next.js Pages
+        /pets | /schedule | /assistant"]
+        Store["Client State Store
+        pawpal-store.tsx + localStorage"]
+    end
+
+    %% Server Layer
+    subgraph Server["Application Server (Next.js)"]
+        PawpalAPI["POST /api/pawpal
+        Context assistant endpoint"]
+        ChatAPI["POST /api/chat
+        Retrieval + completion endpoint"]
+    end
+
+    %% Domain Layer
+    subgraph Domain["Domain Logic"]
+        TSPlanner["TypeScript Planner Utilities
+        lib/pawpal.ts"]
+        PyDomain["Python Scheduling Model
+        pawpal_system.py"]
+        PyRAG["Python RAG Helper
+        pawpal_chat.py"]
+    end
+
+    %% External Services
+    subgraph External["External Services"]
+        OpenAI["OpenAI API
+        Embeddings + Chat Completion"]
+        Astra["Astra DB
+        Vector retrieval"]
+    end
+
+    %% Runtime / Ops
+    subgraph Ops["Runtime Guardrails"]
+        Env[".env configuration"]
+        EnvCheck["check:env
+        scripts/verify-env.js"]
+        StartSafe["start:safe
+        check -> build -> start"]
+        Logs["Structured API logs
+        requestId + duration + fallback reason"]
+    end
+
+    %% Primary interactions
+    User -->|"Uses app UI"| UI
+    UI <-->|"Reads/writes state"| Store
+
+    UI -->|"Ask assistant"| PawpalAPI
+    UI -->|"Chat request"| ChatAPI
+
+    PawpalAPI -->|"Builds facts + ranking"| TSPlanner
+    PawpalAPI -->|"Embeddings + completion"| OpenAI
+    PawpalAPI -->|"Fallback on quota/key failure"| Logs
+
+    ChatAPI -->|"Embeds user query"| OpenAI
+    ChatAPI -->|"Vector search"| Astra
+    ChatAPI -->|"Completion request"| OpenAI
+    ChatAPI -->|"Errors + telemetry"| Logs
+
+    %% Cross-language/domain context
+    TSPlanner -. "Logic parity/reference" .- PyDomain
+    PyRAG -->|"Alternative Python assistant path"| OpenAI
+
+    %% Startup and safety
+    Env --> PawpalAPI
+    Env --> ChatAPI
+    Env --> EnvCheck
+    EnvCheck --> StartSafe
+    StartSafe --> UI

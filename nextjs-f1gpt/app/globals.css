@@ -1,5 +1,6 @@
 :root {
   font-family: Verdana, Tahoma, sans-serif;
+  color: #0f172a;
 }
 
 * {
@@ -14,13 +15,12 @@ body {
 
 body {
   background: radial-gradient(circle at top, #eef2ff 0%, #d1d4f3 40%, #f8fafc 100%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  color: #0f172a;
 }
 
-main {
-  width: min(960px, 95vw);
+body > main {
+  width: min(1200px, 95vw);
+  margin: 24px auto;
   min-height: 80vh;
   background: rgba(255, 255, 255, 0.96);
   border-radius: 28px;
@@ -28,6 +28,234 @@ main {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* PawPal layout */
+.pawpal-main {
+  display: flex;
+  gap: 20px;
+  padding: 24px;
+}
+
+.sidebar {
+  width: 320px;
+  padding: 18px;
+  border-right: 1px solid #eef2ff;
+}
+
+.sidebar h2,
+.sidebar h3 {
+  margin: 8px 0;
+}
+
+.pet-form,
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.input,
+input[type="number"],
+select,
+textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e6e9f2;
+  background: white;
+  outline: none;
+}
+
+.input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  border-color: #60a5fa;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn.ghost {
+  background: #f8fafc;
+  border: 1px solid #e6eefc;
+  color: #1f2937;
+}
+
+.btn.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.content {
+  flex: 1;
+  padding: 8px 12px;
+}
+
+.task-card {
+  border: 1px solid #eef2ff;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+}
+
+.task-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.panel-section {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed #eef2ff;
+}
+
+.landing-shell {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hero-card {
+  border-radius: 24px;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  padding: 32px;
+  border: 1px solid #dbeafe;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 0 0 8px;
+}
+
+.hero-card h1 {
+  margin: 0 0 10px;
+  font-size: clamp(1.8rem, 2.3vw, 2.6rem);
+}
+
+.hero-card p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.app-nav {
+  width: min(1200px, 95vw);
+  margin: 24px auto 0;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  border: 1px solid #dbeafe;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.app-nav-brand {
+  font-weight: 800;
+  color: #1e3a8a;
+}
+
+.app-nav-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #dbeafe;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.nav-link.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.status-message {
+  color: #1e40af;
+  margin-top: 0;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.feature-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px;
+  background: white;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+}
+
+.feature-card h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+.feature-card p {
+  margin-bottom: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+@media (max-width: 880px) {
+  .app-nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pawpal-main {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #eef2ff;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 header,

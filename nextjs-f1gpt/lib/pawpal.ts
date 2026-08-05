@@ -10,6 +10,11 @@ export type Task = {
   is_complete?: boolean
 }
 
+export type TaskCompletionResult = {
+  updatedTask: Task
+  nextTask: Task | null
+}
+
 export type Pet = {
   name: string
   species: string
@@ -68,7 +73,7 @@ export function isFeasible(task: Task, availableMinutes: number) {
 
 export function scheduleKey(task: Task): string | null {
   if (!task.preferred_time) return null
-  return `${task.preferred_time}::${task.due_date || ""}`
+  return `${task.preferred_time.trim()}::${task.due_date || ""}`
 }
 
 export function sortByPriorityDurationTitle(tasks: Task[]) {
@@ -98,7 +103,7 @@ export function sortByTime(tasks: Task[]) {
 
 export function generatePlan(owner: Owner, pet: Pet) {
   const availableTime = owner.available_time_minutes
-  const candidateTasks: Task[] = pet.tasks ? pet.tasks.slice() : []
+  const candidateTasks: Task[] = pet.tasks ? pet.tasks.filter((task) => !task.is_complete) : []
   const selected: Task[] = []
   for (const task of sortByPriorityDurationTitle(candidateTasks)) {
     if (selected.includes(task)) continue
@@ -127,10 +132,9 @@ export function detectTimeConflicts(tasks: Task[]) {
   for (const k of Object.keys(map)) {
     if (map[k].length < 2) continue
     const parts = k.split("::")
-    const time = parts[0]
     const due = parts[1]
     const dateInfo = due ? ` on ${due}` : ""
-    const taskList = map[k].map((t) => `'${t.title}' (${t.title})`).join(", ")
+    const taskList = map[k].map((t) => `'${t.title}'`).join(", ")
     warnings.push(`Warning: tasks scheduled at the same time${dateInfo}: ${taskList}.`)
   }
   return warnings
@@ -139,4 +143,35 @@ export function detectTimeConflicts(tasks: Task[]) {
 export function warnConflicts(tasks: Task[]) {
   const w = detectTimeConflicts(tasks)
   return w.length ? w.join("\n") : "No scheduling conflicts detected."
+}
+
+function toIsoDateString(date: Date): string {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, "0")
+  const day = `${date.getDate()}`.padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+export function completeTask(task: Task, today = new Date()): TaskCompletionResult {
+  const updatedTask: Task = { ...task, is_complete: true }
+  const recurrenceType = (task.recurrence || "").trim().toLowerCase()
+
+  if (!task.is_recurring || (recurrenceType !== "daily" && recurrenceType !== "weekly")) {
+    return { updatedTask, nextTask: null }
+  }
+
+  const nextDueDate = new Date(today)
+  if (recurrenceType === "daily") {
+    nextDueDate.setDate(nextDueDate.getDate() + 1)
+  } else {
+    nextDueDate.setDate(nextDueDate.getDate() + 7)
+  }
+
+  const nextTask: Task = {
+    ...task,
+    due_date: toIsoDateString(nextDueDate),
+    is_complete: false,
+  }
+
+  return { updatedTask, nextTask }
 }

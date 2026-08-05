@@ -1,0 +1,67 @@
+flowchart LR
+    %% PawPal+ AI System Diagram
+
+    User((User))
+    QA((Human Reviewer / QA))
+
+    Input[User Question + Active Pet Context]
+
+    subgraph App[Application Layer]
+        UI[Assistant UI
+        nextjs-f1gpt/app/assistant/page.tsx]
+        APIPawpal[API Handler
+        POST /api/pawpal]
+    end
+
+    subgraph AIFlow[AI Processing Components]
+        Retriever[Retriever
+        keywordTopFacts + embeddings ranking]
+        Agent[Agent
+        OpenAI chat completion]
+        Evaluator[Evaluator / Guardrails
+        request validation + fallback decision]
+    end
+
+    subgraph Data[Knowledge Sources]
+        State[(Client State
+        owner/pet/tasks facts)]
+        VectorDB[(Astra DB optional retrieval path)]
+        OpenAI[(OpenAI API)]
+    end
+
+    subgraph Quality[Testing and Verification]
+        Tests[Automated Tests
+        pytest + build checks]
+        Logs[Runtime Logs
+        requestId, errors, fallback reason]
+        Manual[Manual Review
+        validate answer quality and safety]
+    end
+
+    Output[Assistant Response
+    answer + optional fallback warning]
+
+    User --> Input --> UI --> APIPawpal
+    UI --> State
+
+    APIPawpal --> Evaluator
+    Evaluator --> Retriever
+    Retriever --> State
+    Retriever -. optional .-> VectorDB
+    Retriever --> Agent
+    Agent --> OpenAI
+    OpenAI --> Agent
+
+    Agent --> Output
+    Evaluator --> Output
+    Output --> User
+
+    APIPawpal --> Logs
+    Evaluator --> Logs
+    Output --> Manual
+    QA --> Manual
+    Manual --> QA
+
+    Tests --> QA
+    Tests --> Logs
+    Logs --> QA
