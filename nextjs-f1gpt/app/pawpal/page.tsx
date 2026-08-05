@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import type { Owner, Pet, Task } from "../../lib/pawpal"
+import { generatePlan, explainPlan, warnConflicts, sortByTime } from "../../lib/pawpal"
 
 const defaultOwner: Owner = { name: "Jordan", available_time_minutes: 180, preferences: [], pets: [{ name: "Mochi", species: "dog", tasks: [] }] }
 
@@ -14,6 +15,9 @@ export default function PawpalPage() {
   const [ragQuery, setRagQuery] = useState("")
   const [chatHistory, setChatHistory] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [scheduledTasks, setScheduledTasks] = useState<Task[] | null>(null)
+  const [scheduleReasons, setScheduleReasons] = useState<string[] | null>(null)
+  const [conflictMessage, setConflictMessage] = useState<string | null>(null)
 
   const pet = owner.pets[activePetIndex]
 
@@ -95,10 +99,45 @@ export default function PawpalPage() {
         )}
 
         <hr />
+        <hr />
         <div style={{ display: "flex", gap: 12 }}>
           <button onClick={() => setShowChat((s) => !s)}>Toggle chat</button>
-          <button onClick={async () => { /* placeholder for schedule generation */ alert('Generate schedule in next step') }}>Generate schedule</button>
+          <button onClick={() => {
+            // Generate schedule using current owner + pet state
+            const plan = generatePlan(owner, pet)
+            setScheduledTasks(plan)
+            setScheduleReasons(explainPlan(plan))
+            setConflictMessage(warnConflicts(pet.tasks || []))
+          }}>Generate schedule</button>
         </div>
+
+        {scheduledTasks && (
+          <div style={{ marginTop: 12 }}>
+            <h4>Tasks ordered by preferred time</h4>
+            <div>
+              {sortByTime(scheduledTasks).map((t, i) => (
+                <div key={i}>{t.title} — {t.preferred_time || 'N/A'} — {t.duration_minutes}m</div>
+              ))}
+            </div>
+
+            <h4 style={{ marginTop: 12 }}>Scheduled tasks</h4>
+            {scheduledTasks.length ? (
+              <div>
+                {scheduledTasks.map((t, i) => (
+                  <div key={i}>{t.title} — {t.duration_minutes}m — {t.priority}</div>
+                ))}
+              </div>
+            ) : (
+              <p>No tasks fit within the available time.</p>
+            )}
+
+            <h4 style={{ marginTop: 12 }}>Why this plan</h4>
+            {scheduleReasons && scheduleReasons.map((r, i) => <div key={i}>- {r}</div>)}
+
+            <h4 style={{ marginTop: 12 }}>Conflicts</h4>
+            <div>{conflictMessage}</div>
+          </div>
+        )}
 
         {showChat && (
           <div style={{ marginTop: 16 }}>
