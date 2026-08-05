@@ -253,7 +253,10 @@ if st.session_state.show_chat:
                         "facts": retrieved_facts,
                     }
                 )
-                st.experimental_rerun()
+                try:
+                    st.experimental_rerun()
+                except AttributeError:
+                    pass
 
     if st.session_state.chat_history:
         for entry in reversed(st.session_state.chat_history):
