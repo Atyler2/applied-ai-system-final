@@ -1,4 +1,4 @@
-# PawPal+
+# PawPal+(MODULE 2)
 
 PawPal+ is a React and Next.js application for planning pet care tasks and asking an AI assistant about the active owner, pet, and schedule.
 
@@ -104,3 +104,17 @@ Example 3
 - Output: "I can still help using the current PawPal context, but full AI mode is temporarily unavailable. Recommended next steps: focus on essentials like feeding, medication, and exercise when time is limited."
 
 Note: When OpenAI quota/billing is active, these responses come from the full model flow instead of fallback mode.
+
+
+## Realiability and gaurdrail checks
+npm run check:env
+
+> nextjs-f1gpt@0.1.0 check:env
+> node scripts/verify-env.js
+
+◇ injected env (5) from .env // tip: ⌘ enable debugging { debug: true }
+[env-check] Working directory: C:\Users\alade\OneDrive\Desktop\python\ai-system-final\nextjs-f1gpt
+[env-check] .env file: found
+[env-check] Required environment variables are present.
+[env-check] Environment validation complete.
+
