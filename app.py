@@ -2,6 +2,8 @@ from typing import Optional
 import streamlit as st
 from pawpal_system import Owner, Pet, Scheduler, Task
 from pawpal_chat import generate_rag_answer
+import sys
+import traceback
 
 
 def is_openai_installed() -> bool:
@@ -14,12 +16,45 @@ def is_openai_installed() -> bool:
 
 openai_installed = is_openai_installed()
 
+# Diagnostic block: attempt import and report environment details.
+try:
+    if openai_installed:
+        import openai  # type: ignore
+        openai_version = getattr(openai, "__version__", "unknown")
+        DIAGNOSTIC_MSG = f"openai import OK ({openai_version})"
+    else:
+        DIAGNOSTIC_MSG = "openai not importable (ImportError)"
+except Exception as e:
+    DIAGNOSTIC_MSG = f"openai import unexpected error: {e}"
+
+DIAGNOSTIC_INFO = {
+    "py_executable": sys.executable,
+    "sys_path": sys.path,
+    "diagnostic_msg": DIAGNOSTIC_MSG,
+}
+
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="wide")
 
 st.title("🐾 PawPal+")
+
+# Surface diagnostic info in the UI and logs so deployment environment can be inspected.
+with st.expander("Deployment diagnostics", expanded=False):
+    st.write(DIAGNOSTIC_MSG)
+    st.write("Python executable:")
+    st.write(DIAGNOSTIC_INFO["py_executable"])
+    st.write("sys.path (truncated):")
+    for p in DIAGNOSTIC_INFO["sys_path"][:10]:
+        st.write(f"- {p}")
+    st.write("Full traceback (if any):")
+    try:
+        if not openai_installed:
+            raise ImportError("openai not available in environment")
+    except Exception:
+        tb = traceback.format_exc()
+        st.text(tb)
 
 st.markdown(
     """
