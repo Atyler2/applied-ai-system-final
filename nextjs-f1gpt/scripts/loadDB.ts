@@ -70,8 +70,8 @@ const createCollectionIfMissing = async () => {
       defaultId: { type: "uuid" },
     })
     console.log("Collection created")
-  } catch (error: any) {
-    const message = String(error.message || error)
+  } catch (error) {
+    const message = String((error as Error)?.message || error)
     if (message.toLowerCase().includes("already exists")) {
       console.log("Collection already exists, continuing...")
     } else {
