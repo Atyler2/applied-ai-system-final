@@ -1,9 +1,6 @@
 import os
 from typing import List, Optional
 
-import openai
-from openai.error import OpenAIError
-
 from pawpal_system import Owner, Pet, Task
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -62,12 +59,21 @@ def retrieve_top_facts(query: str, owner: Owner, pet: Pet, top_k: int = 3) -> Li
     return relevant[:top_k]
 
 
-def get_openai_client() -> None:
+def get_openai_client():
+    try:
+        import openai
+        from openai.error import OpenAIError
+    except ImportError as exc:
+        raise RuntimeError(
+            "The openai package is not installed. Add openai to requirements.txt."
+        ) from exc
+
     if not OPENAI_API_KEY:
-        raise ValueError(
+        raise RuntimeError(
             "OPENAI_API_KEY is not set. Please set it in your environment before running PawPal+."
         )
     openai.api_key = OPENAI_API_KEY
+    return openai, OpenAIError
 
 
 def generate_rag_answer(
@@ -78,7 +84,7 @@ def generate_rag_answer(
 ) -> tuple[str, List[str]]:
     retrieved_facts = retrieve_top_facts(query, owner, pet, top_k=top_k)
     try:
-        get_openai_client()
+        openai, OpenAIError = get_openai_client()
 
         context_text = "\n".join(retrieved_facts)
         system_message = (
@@ -107,5 +113,5 @@ def generate_rag_answer(
             f"OpenAI API error: {exc}. Please verify your OPENAI_API_KEY and quota.",
             retrieved_facts,
         )
-    except ValueError as exc:
+    except RuntimeError as exc:
         return str(exc), retrieved_facts
